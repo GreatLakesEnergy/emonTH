@@ -17,21 +17,21 @@
   THIS SKETCH REQUIRES:
 
   Libraries in the standard arduino libraries folder:
-  - JeeLib		        https://github.com/jcw/jeelib
+  - JeeLib            https://github.com/jcw/jeelib
   - DHT22 Sensor Library  https://github.com/adafruit/DHT-sensor-library - be sure to rename the sketch folder to remove the '-'
-  - OneWire library	    http://www.pjrc.com/teensy/td_libs_OneWire.html
-  - DallasTemperature	    http://download.milesburton.com/Arduino/MaximTemperature/DallasTemperature_LATEST.zip
+  - OneWire library     http://www.pjrc.com/teensy/td_libs_OneWire.html
+  - DallasTemperature     http://download.milesburton.com/Arduino/MaximTemperature/DallasTemperature_LATEST.zip
 
   Recommended node ID allocation
   -----------------------------------------------------------------------------------------------------------
-  -ID-	-Node Type- 
-  0	- Special allocation in JeeLib RFM12 driver - reserved for OOK use
+  -ID-  -Node Type- 
+  0 - Special allocation in JeeLib RFM12 driver - reserved for OOK use
   1-4     - Control nodes 
-  5-10	- Energy monitoring nodes
-  11-14	--Un-assigned --
-  15-16	- Base Station & logging nodes
-  17-30	- Environmental sensing nodes (temperature humidity etc.)
-  31	- Special allocation in JeeLib RFM12 driver - Node31 can communicate with nodes on any network group
+  5-10  - Energy monitoring nodes
+  11-14 --Un-assigned --
+  15-16 - Base Station & logging nodes
+  17-30 - Environmental sensing nodes (temperature humidity etc.)
+  31  - Special allocation in JeeLib RFM12 driver - Node31 can communicate with nodes on any network group
   -------------------------------------------------------------------------------------------------------------
   Change log:
   v2.1 - Branched from emonTH_DHT22_DS18B20 example, first version of pulse counting version
@@ -48,15 +48,14 @@ See: https://github.com/openenergymonitor/emonhub/blob/emon-pi/configuration.md
 
   [[23]]
     nodename = emonTH_5
-    firmware = V2.x_emonTH_DHT22_DS18B20_RFM69CW_Pulse
+    firmware = V2.x_RTC_wireless_sensor_nodes_firmware
     hardware = emonTH_(Node_ID_Switch_DIP1:OFF_DIP2:OFF)
     [[[rx]]]
-       names = temperature, external temperature, humidity, battery, pulseCount
-       datacodes = h,h,h,h,L
-       scales = 0.1,0.1,0.1,0.1,1
-       units = C,C,%,V,p
+       names = ambient_temp,ambient_humidity, coffee_beans_temperature, coffee_beans_humidity, battery, pulseCount
+       datacodes = h,h,h,h,h,L
+       scales = 0.1,0.1,0.1,0.1,0.1,1
+       units = C,%,C,%,V,p
 */
-
 const byte version = 26;         // firmware version divided by 10 e,g 16 = V1.6
                                                                       // These variables control the transmit timing of the emonTH
 const unsigned long WDT_PERIOD = 80;                                  // mseconds.
@@ -65,8 +64,6 @@ const unsigned long WDT_MAX_NUMBER = 690;                             // Data se
 
 const  unsigned long PULSE_MAX_NUMBER = 100;                          // Data sent after PULSE_MAX_NUMBER pulses
 const  unsigned long PULSE_MAX_DURATION = 50;              
-
-
 #define RF69_COMPAT 1                                                 // Set to 1 if using RFM69CW or 0 is using RFM12B
 #include <JeeLib.h>                                                   // https://github.com/jcw/jeelib - Tested with JeeLib 3/11/14
 
@@ -75,7 +72,7 @@ boolean debug=1;                                                      // Set to 
 #define RF_freq RF12_433MHZ                                           // Frequency of RF12B module can be RF12_433MHZ, RF12_868MHZ or RF12_915MHZ. You should use the one matching the module you have.
 int nodeID = 23;                                                      // EmonTH temperature RFM12B node ID - should be unique on network
 const int networkGroup = 210;                                         // EmonTH RFM12B wireless network group - needs to be same as emonBase and emonGLCD
-                                                                        // DS18B20 resolution 9,10,11 or 12bit corresponding to (0.5, 0.25, 0.125, 0.0625 degrees C LSB), 
+//uint32_t networkGroup = 3421749817;                                                                    // oneWireSensor resolution 9,10,11 or 12bit corresponding to (0.5, 0.25, 0.125, 0.0625 degrees C LSB), 
                                                                       // lower resolution means lower power
 
 const int TEMPERATURE_PRECISION=11;                                   // 9 (93.8ms),10 (187.5ms) ,11 (375ms) or 12 (750ms) bits equal to resplution of 0.5C, 0.25C, 0.125C and 0.0625C
@@ -89,36 +86,33 @@ const int TEMPERATURE_PRECISION=11;                                   // 9 (93.8
 ISR(WDT_vect) { Sleepy::watchdogEvent(); }                            // Attached JeeLib sleep function to Atmega328 watchdog -enables MCU to be put into sleep mode inbetween readings to reduce power consumption 
 
 // Hardwired emonTH pin allocations 
-const byte DS18B20_PWR=    5;
-const byte DHT22_PWR=      6;
+const byte activate_coffee_beans_sensor=    5;
+const byte activate_ambient_sensor=      6;
 const byte LED=            9;
 const byte BATT_ADC=       1;
 const byte DIP_switch1=    7;
 const byte DIP_switch2=    8;
 const byte pulse_countINT= 1;                                        // INT 1 / Dig 3 Screw Terminal Block Number 4 on emonTH V1.5 - Change to INT0 DIG2 on emonTH V1.4
 const byte pulse_count_pin=3;                                        // INT 1 / Dig 3 Screw Terminal Block Number 4 on emonTH V1.5 - Change to INT0 DIG2 on emonTH V1.4
-#define ONE_WIRE_BUS       19
-#define DHTPIN             18   
-
-// Humidity code adapted from ladyada' example                        // emonTh DHT22 data pin
-// Uncomment whatever type you're using!
-// #define DHTTYPE DHT11   // DHT 11 
+#define sensors_humidity_pin      19 //A5
+#define sensors_temperature_pin   18   //A4
 #define DHTTYPE DHT22   // DHT 22  (AM2302)
-DHT dht(DHTPIN, DHTTYPE);
-boolean DHT22_status;                                                 // create flag variable to store presence of DS18B20
+DHT dht(sensors_temperature_pin, DHTTYPE);
+boolean DHT22_status;                                                 // create flag variable to store presence of oneWireSensor
 
-OneWire oneWire(ONE_WIRE_BUS);
+OneWire oneWire(sensors_humidity_pin);
 DallasTemperature sensors(&oneWire);
-boolean DS18B20;                                                      // create flag variable to store presence of DS18B20 
+boolean oneWireSensor;                                                      // create flag variable to store presence of oneWireSensor 
 
 // Note: Please update emonhub configuration guide on OEM wide packet structure change:
 // https://github.com/openenergymonitor/emonhub/blob/emon-pi/configuration.md
 typedef struct {                                                      // RFM12B RF payload datastructure
-  int temp;
-  int temp_external;
-  int humidity;    
+  int ambient_temp;
+  int ambient_humidity;
+  int coffee_beans_temperature;
+  int coffee_beans_humidity;    
   int battery;
-  unsigned long pulsecount;     	                                      
+  unsigned long pulsecount;                                             
 } Payload;
 Payload emonth;
 
@@ -155,12 +149,12 @@ void setup() {
   // Send RFM69CW test sequence (for factory testing)
   for (int i=10; i>-1; i--)                                         
   {
-    emonth.temp=i; 
+    emonth.coffee_beans_temperature=i; 
     rf12_sendNow(0, &emonth, sizeof emonth);
     delay(100);
   }
   rf12_sendWait(2);
-  emonth.temp=0;
+  emonth.coffee_beans_temperature=0;
   // end of factory test sequence
   
   rf12_sleep(RF12_SLEEP);
@@ -186,10 +180,10 @@ void setup() {
     delay(100);
   }
   
-  pinMode(DHT22_PWR,OUTPUT);
-  pinMode(DS18B20_PWR,OUTPUT);
+  pinMode(activate_ambient_sensor,OUTPUT);
+  pinMode(activate_coffee_beans_sensor,OUTPUT);
   pinMode(BATT_ADC, INPUT);
-  digitalWrite(DHT22_PWR,LOW);
+  digitalWrite(activate_ambient_sensor,LOW);
   pinMode(pulse_count_pin, INPUT_PULLUP);
 
   //################################################################################################################################
@@ -198,19 +192,19 @@ void setup() {
   ACSR |= (1 << ACD);                     // disable Analog comparator    
   if (debug==0) power_usart0_disable();   //disable serial UART
   power_twi_disable();                    //Disable the Two Wire Interface module.
-  // power_timer0_disable();              //don't disable necessary for the DS18B20 library
+  // power_timer0_disable();              //don't disable necessary for the oneWireSensor library
   power_timer1_disable();
   power_spi_disable();
  
   //################################################################################################################################
   // Test for presence of DHT22
   //################################################################################################################################
-  digitalWrite(DHT22_PWR,HIGH);
+  digitalWrite(activate_ambient_sensor,HIGH);
   dodelay(2000);                                                        // wait 2s for DH22 to warm up
   dht.begin();
   float h = dht.readHumidity();                                         // Read Humidity
   float t = dht.readTemperature();                                      // Read Temperature
-  digitalWrite(DHT22_PWR,LOW);                                          // Power down
+  digitalWrite(activate_ambient_sensor,LOW);                              // Power down
   
   if (isnan(t) || isnan(h))                                             // check if returns are valid, if they are NaN (not a number) then something went wrong!
   {
@@ -218,8 +212,8 @@ void setup() {
     float h = dht.readHumidity();  float t = dht.readTemperature();
     if (isnan(t) || isnan(h))   
     {
-      if (debug==1) Serial.println("No DHT22"); 
-      DHT22_status=0;
+      if (debug==1) Serial.println("No DHT22 detected, but A4 is now going to be used by another analog sensor"); 
+      DHT22_status=1;
     } 
   } 
   else 
@@ -229,35 +223,35 @@ void setup() {
   }   
  
   //################################################################################################################################
-  // Setup and for presence of DS18B20
+  // Setup and for presence of oneWireSensor
   //################################################################################################################################
-  digitalWrite(DS18B20_PWR, HIGH); delay(50); 
+  digitalWrite(activate_coffee_beans_sensor, HIGH); delay(50); 
   sensors.begin();
-  sensors.setWaitForConversion(false);                             //disable automatic temperature conversion to reduce time spent awake, conversion will be implemented manually in sleeping http://harizanov.com/2013/07/optimizing-ds18b20-code-for-low-power-applications/ 
+  sensors.setWaitForConversion(false);                             //disable automatic temperature conversion to reduce time spent awake, conversion will be implemented manually in sleeping http://harizanov.com/2013/07/optimizing-oneWireSensor-code-for-low-power-applications/ 
   numSensors=(sensors.getDeviceCount()); 
   
   byte j=0;                                        // search for one wire devices and
                                                    // copy to device address arrays.
   while ((j < numSensors) && (oneWire.search(allAddress[j])))  j++;
-  digitalWrite(DS18B20_PWR, LOW);
+  digitalWrite(activate_coffee_beans_sensor, LOW);
   
   if (numSensors==0)
   {
-    if (debug==1) Serial.println("No DS18B20");
-    DS18B20=0; 
+    if (debug==1) Serial.println("No one wire sensor detected, No oneWireSensor");
+    oneWireSensor=1; 
   } 
   else 
   {
-    DS18B20=1; 
+    oneWireSensor=1; 
     if (debug==1) {
-      Serial.print("Detected "); Serial.print(numSensors); Serial.println(" DS18B20");
-       if (DHT22_status==1) Serial.println("DS18B20 & DHT22 found, assume DS18B20 is external");
+      Serial.print("Detected "); Serial.print(numSensors); Serial.println(" oneWireSensor");
+       if (DHT22_status==1) Serial.println("oneWireSensor & DHT22 found, assume oneWireSensor is coffeeBeansSensor");
     }
   }
   if (debug==1) delay(200);
   
   //################################################################################################################################
-  // Serial.print(DS18B20); Serial.print(DHT22_status);
+  // Serial.print(oneWireSensor); Serial.print(DHT22_status);
   // if (debug==1) delay(200);
    
   digitalWrite(LED,LOW);
@@ -293,52 +287,77 @@ void loop()
     pulseCount = 0;
     sei();
    
-    if (DS18B20==1)
+    if (oneWireSensor==1)
     {
-      digitalWrite(DS18B20_PWR, HIGH); dodelay(50); 
-      for(int j=0;j<numSensors;j++) sensors.setResolution(allAddress[j], TEMPERATURE_PRECISION);      // and set the a to d conversion resolution of each.
-      sensors.requestTemperatures();                                        // Send the command to get temperatures
+      digitalWrite(activate_coffee_beans_sensor, HIGH); dodelay(2000); 
+      //for(int j=0;j<numSensors;j++) sensors.setResolution(allAddress[j], TEMPERATURE_PRECISION);      // and set the a to d conversion resolution of each.
+      //sensors.requestTemperatures();                                        // Send the command to get temperatures
       dodelay(ASYNC_DELAY); //Must wait for conversion, since we use ASYNC mode
-      float temp=(sensors.getTempC(allAddress[0]));
-      digitalWrite(DS18B20_PWR, LOW);
-      if ((temp<125.0) && (temp>-40.0))
+      //float temp=(sensors.getTempC(allAddress[0]));
+      //##################calibrate this based on the Temp and Humidty Probe#############################
+      //Humidity sensor; Linear Equation from sensor datasheet
+      //Vout=26.65*RH+1006
+      //RH=0.0375*Vout-37.7
+      float coffee_beans_temperature=analogRead(sensors_temperature_pin);  //readings from A4
+      float coffee_beans_humidity=analogRead(sensors_humidity_pin);  //readings from A5
+
+      
+      //##################################################################################################
+      digitalWrite(activate_coffee_beans_sensor, LOW);
+      if ((coffee_beans_temperature<1250.0) && (coffee_beans_temperature>-40.0))
       {
-        if (DHT22_status==0) emonth.temp=(temp*10);            // if DHT22 is not present assume DS18B20 is primary sensor (internal)
-        if (DHT22_status==1) emonth.temp_external=(temp*10);   // if DHT22 is present assume DS18B20 is external sensor wired into terminal block
+        if (DHT22_status==0) emonth.coffee_beans_temperature=(coffee_beans_temperature*10);            // if DHT22 is not present assume oneWireSensor is primary sensor (internal)
+        if (DHT22_status==1) emonth.coffee_beans_temperature=(coffee_beans_temperature*10);   // if DHT22 is present assume oneWireSensor is coffeeBeansSensor sensor wired into terminal block
       }
+      emonth.coffee_beans_humidity=coffee_beans_humidity*10;
     }
     
     if (DHT22_status==1)
     { 
-      digitalWrite(DHT22_PWR,HIGH);                                                                                                  // Send the command to get temperatures
+      dodelay(2000);    
+      digitalWrite(activate_ambient_sensor,HIGH);      //powered from D3                                                                                                 // Send the command to get temperatures
       dodelay(2000);                                             //sleep for 1.5 - 2's to allow sensor to warm up
       // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-      emonth.humidity = ((dht.readHumidity())*10);
+      
+      //##################################3calibrate this depending on the temp and Humidity we are going to use********************
+      //Humidity sensor; Linear Equation from sensor datasheet
+      //Vout=26.65*RH+1006
+      //RH=0.0375*Vout-37.7
+      emonth.ambient_humidity = analogRead(sensors_humidity_pin);  //data comming from A5
+      float ambient_temp=(analogRead(sensors_temperature_pin)); //data comming from A4
+      //####################################################################################################
+      if ((ambient_temp<1250.0) && (ambient_temp>-40.0)) emonth.ambient_temp = (ambient_temp*10);
 
-      float temp=(dht.readTemperature());
-      if ((temp<85.0) && (temp>-40.0)) emonth.temp = (temp*10);
-
-      digitalWrite(DHT22_PWR,LOW); 
+      digitalWrite(activate_ambient_sensor,LOW); 
     }
     
     emonth.battery=int(analogRead(BATT_ADC)*0.03225806);                    //read battery voltage, convert ADC to volts x10
        
     if (debug==1) 
     {
-      if (DS18B20)
+      if (oneWireSensor)
       {
-        Serial.print("DS18B20 Temperature: ");
-        if (DHT22_status) Serial.print(emonth.temp_external/10.0); 
-        if (!DHT22_status) Serial.print(emonth.temp/10.0);
-        Serial.print("C, ");
+        
+        if (DHT22_status) 
+        {
+          Serial.print("Coffee Beans Temp: ");
+          Serial.print(emonth.coffee_beans_temperature/10.0); 
+          Serial.print("C, ");
+          Serial.print(" Coffee Beans Humidity: ");
+          Serial.print(emonth.coffee_beans_humidity/10.0); 
+          Serial.print("%, ");
+        }
+        
+        if (!DHT22_status) Serial.print(emonth.ambient_temp/10.0);  // use ambient temperature in case coffe beans sensor fails
+        
       }
       
       if (DHT22_status)
       {
-        Serial.print("DHT22 Temperature: ");
-        Serial.print(emonth.temp/10.0); 
-        Serial.print("C, DHT22 Humidity: ");
-        Serial.print(emonth.humidity/10.0);
+        Serial.print("Ambient Temperature: ");
+        Serial.print(emonth.ambient_temp/10.0); 
+        Serial.print("C, Ambient Humidity: ");
+        Serial.print(emonth.ambient_humidity/10.0);
         Serial.print("%, ");
       }
       
@@ -372,6 +391,7 @@ void loop()
     
     WDT_number=0;
   }
+
 
 } // end loop 
 
