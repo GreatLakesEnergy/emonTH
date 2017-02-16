@@ -1,4 +1,17 @@
-//from http://playground.arduino.cc/ComponentLib/Thermistor2
+/*
+ * The Temperature and Humidity Wireless sensor nodes has one sensor which is perforimg two tasks,
+ * The Humidity sensor is just one wire coming to the sensor while Temperature sensor is 10K normal Thermistor
+ * To read Temperature we need voltage divider as normal Thermistor; so WSN has 10K resistor in
+ * Because we need to measure Ambinet Temp. Coffee beans Temp, Ambient Humidity and Coffe beans Humidity, We would need four analog sensor on our Board while our TH has two free analog Pins
+ * We did use two analog pins to read these parameters
+ * TH has Analog sensor A4 which is coupled with 10K SMD, so we use that for one thermistor and for one Humidity senosr; 
+ * Which means the Microcontroller goes to sleep mode for 3 seconds, wakes up, take Humidity from sensor sleep 2 seconds and take the temperature of another sensor
+
+ * from http://playground.arduino.cc/ComponentLib/Thermistor2
+ * 
+*/
+
+
 #include <math.h>                                               
 #define RF69_COMPAT 1                                                 // Set to 1 if using RFM69CW or 0 is using RFM12B
 #include <JeeLib.h>                                                   // https://github.com/jcw/jeelib - Tested with JeeLib 3/11/14
@@ -7,10 +20,9 @@ boolean debug=1;                                       //Set to 1 to few debug s
 
 #define RF_freq RF12_433MHZ                 // Frequency of RF12B module can be RF12_433MHZ, RF12_868MHZ or RF12_915MHZ. You should use the one matching the module you have.
 int nodeID = 30;                               // EmonTH temperature RFM12B node ID - should be unique on network
-const int networkGroup = 210;                // EmonTH RFM12B wireless network group - needs to be same as emonBase and emonGLCD
-//uint32_t networkGroup = 3421749817;    //numeric value from ansible rmc_key
+//const int networkGroup = 210;                // EmonTH RFM12B wireless network group - needs to be same as emonBase and emonGLCD
+uint32_t networkGroup = 3421749817;    //numeric value from ansible rmc_key
                                                                       
-
 const int time_between_readings= 1;                                   // in minutes
 #include <avr/power.h>
 #include <avr/sleep.h>                            
