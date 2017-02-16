@@ -1,22 +1,24 @@
 # emonTH - Wireless Temperature and Humidity monitoring node 
-//##################################################################################################################
+//############################################################
 # RTC wireless sensor nodes for Shyara
-Shyara wet mill station has six wireless sensor nodes:
-•	3 WSN for Temperature and Humidity
-•	3 WSN for Fermentation tank (PH and Alcohol)
-All of these WSN are based on TH boards,
-For Temp and Humidity WSN, sensors are wired in such way it share the same Analog input pin which means two sensing value are taken from one Analog pin. The TH has surface mounted 10k resitor at A4 and we are using it for temperature measurement as the temperature sensor we are using ahs normal 10K thermistor.
-In Summary, The two sensor has four wires which are distributed as follow:
-•	Ambient Temperature and Coffee beans Humidity are taken from Analog pin 5, DIL 10K resistor is added here.
-•	Ambient Humidity and Coffee beans Temperature are taken from Analog pin 4, Surface mounted resistor used here.
+##Shyara wet mill station has six wireless sensor nodes:
+*3 WSN for Temperature and Humidity
+*3 WSN for Fermentation tank (PH and Alcohol)
 
-The fermentation tank WSN is not self-powered, it gets powered from solar system installed on the site.
+All of these WSN are based on TH boards,
+For Temp and Humidity WSN, sensors(http://docs-europe.electrocomponents.com/webdocs/142c/0900766b8142cdce.pdf) are wired in such way it share the same Analog input pin which means two sensing value are taken from one Analog pin. The TH has surface mounted 10k resitor at A4 and we are using it for temperature measurement as the temperature sensor we are using has normal 10K thermistor.
+##In Summary, The two sensor has four wires which are distributed as follow:
+*	Ambient Temperature and Coffee beans Humidity are taken from Analog pin 5, DIL 10K resistor is added here.
+*	Ambient Humidity and Coffee beans Temperature are taken from Analog pin 4, Surface mounted resistor used here.
+
+##The fermentation tank WSN is not self-powered, it gets powered from solar system installed on the site.
+
 It has two sensor: PH (https://cdn.sparkfun.com/datasheets/Sensors/Biometric/pH_EZO_datasheet_v13.pdf)  and Ethanol (https://www.vernier.com/files/manuals/eth-bta.pdf) sensors.
-The ethanol sensor does not need calibration, it need only to replace the plumber ‘tape on the ethanol cap before starting the new measurement for accuracy readings.
-The PH sensor need to be calibrated atleast once year, the steps to follow is straight forward but you will need approximately 5 min for this per each fermentation wireless sensor node; The PH sensor used has two type of data protocol, we used the UART one due to availability of the free pins on our TH.
+*The ethanol sensor does not need calibration, it need only to replace the plumber ‘tape on the ethanol cap before starting the new measurement for accuracy readings.
+*The PH sensor need to be calibrated atleast once year, the steps to follow is straight forward but you will need approximately 5 min for this per each fermentation wireless sensor node; The PH sensor used has two type of data protocol, we used the UART one due to availability of the free pins on our TH.
 Calibration process is in calibration sketch.
 
-//##################################################################################################################
+//############################################################
 
 
 Part of the openenergymonitor.org project
