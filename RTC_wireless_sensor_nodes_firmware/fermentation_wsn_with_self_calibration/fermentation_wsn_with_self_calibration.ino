@@ -5,6 +5,29 @@
  * "PH 3: DIP1=OFF, DIP2=ON" ==>> NodeID:25
  * DIP1=ON, DIP2=ON" ==>> calibration mode
  * 
+ *  This PH sensor has two data serial Protocal, UART and I2C, We used UART protocal due to availability of TX and RX, I@C was impossible because of A4 and A% which are used for other purpose 
+ * When you program over FTDI cable, it uses the tx and rx pins, so you need to disconnect anything else that might interfere on those pins, Because of this situation, 
+ * to calibrate the PH sensor with FTDI cable is quite hard because you need to talk to the chip(Sending and receiving the response immediately)
+ * Because of above mentioned issue and the PH circuit which is interrupt based that affect the ethanol readings, we need to use softwareSerial to do so.
+ * --------------------------------------------------------------------
+ * EmonTH has free digital pin 5 and 3, so during the process of this calibration we need to:
+ * 1. Disconnect the power supply of WSN
+ * 2. Disconnect the TX and RX of the PH pins from the TH
+ * 2. Connect PH_TX  to digital pin 5; Check where these jumper are connected carefully as it need to be connected back as it was
+ * 3. Connect PH_RX to digital pin 3; Check where these jumper are connected carefully as it need to be connected back as it was
+ * 4. Check the position of DIP1, and 2 switches so that after calibration you put them back in their position
+ * 5. Change the DIP switch to look like DIP1=ON(Position written on it); DIP2=ON(Position written on it)
+ * 6. Always Start with PH=7(Midpoint calibration); pour some solution to calibration container, put the PH problem in solution
+ * 7. Connect the power supply
+ * 7. Check if the LED is steady ON, If so, the WSN is in calibration Mode
+ * 8. Wait for 3 minutes and check the LED if it blinks almost 10 times, if so the midpoint calibration is done, change the solution in less than 2 min so that the sensor detect the H particles before calibration
+ * 8. Put the sensor probe in ph=10(Highpoint calibration); wait around 3min, and check the LED if it blinks almost 10 times, if so the highpoint calibration is done, change the solution in less than 2 min so that the sensor detect the H particles before calibration
+ * 9. Put the sensor probe in ph=4(Highpoint calibration); wait around 3min, and check the LED if it blinks almost 10 times, if so the lowpoint calibration is done, change the solution in less than 2 min so that the sensor detect the H particles before calibration
+ * 10. Disconnect the power supply
+ * 11. Bring back the DIP switches to their position
+ * 12. Connect back the TX and RX of PH circuit to their previous connection
+ * 13. Connect the power supply back; the calibration is done
+ * 
  */
   
 #define RF69_COMPAT 1                                                              // Set to 1 if using RFM69CW or 0 is using RFM12B
