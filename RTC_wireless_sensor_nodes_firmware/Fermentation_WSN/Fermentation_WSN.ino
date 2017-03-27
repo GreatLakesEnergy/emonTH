@@ -1,15 +1,23 @@
+/*
+ * To make this file universal for all three fermentation tanks
+ * "PH 1: DIP1=OFF, DIP2=OFF" ==>> NodeID:23
+ * "PH 2: DIP1=ON, DIP2=OFF" ==>> NodeID:24
+ * "PH 3: DIP1=OFF, DIP2=ON" ==>> NodeID:25
+ * 
+ */
+  
 #define RF69_COMPAT 1                                                              // Set to 1 if using RFM69CW or 0 is using RFM12B
 #include <JeeLib.h>                                                                      //https://github.com/jcw/jeelib - Tested with JeeLib 3/11/14
 
 boolean debug=1;                                       //Set to 1 to few debug serial output, turning debug off increases battery life
 
 #define RF_freq RF12_433MHZ                 // Frequency of RF12B module can be RF12_433MHZ, RF12_868MHZ or RF12_915MHZ. You should use the one matching the module you have.
-int nodeID = 21;                               // EmonTH temperature RFM12B node ID - should be unique on network
-const int networkGroup = 210;                // EmonTH RFM12B wireless network group - needs to be same as emonBase and emonGLCD
-//uint32_t networkGroup = 3421749817;    //numeric value from ansible rmc_key
+int nodeID = 23;                               // EmonTH temperature RFM12B node ID - should be unique on network
+//const int networkGroup = 210;                // EmonTH RFM12B wireless network group - needs to be same as emonBase and emonGLCD
+uint32_t networkGroup = 3421749817;    //numeric value from ansible rmc_key
                                                                       
 
-const int time_between_readings= 2;                                   // in minutes
+const int time_between_readings= 1;                                   // in minutes
 #include <avr/power.h>
 #include <avr/sleep.h>                                           
 
@@ -30,6 +38,7 @@ typedef struct {                                                      // RFM12B 
       int ph;
       int ethanol;
       int battery;    
+      //int pulseCount;
                                                             
 } Payload;
 Payload wsn_fermentation;
@@ -65,8 +74,8 @@ void setup() {                                        //set up the hardware
   inputstring.reserve(10);                            //set aside some bytes for receiving data from the PC
   sensorstring.reserve(30);                           //set aside some bytes for receiving data from Atlas Scientific product
   pinMode(LED,OUTPUT);
-  pinMode(activate_ethanol,OUTPUT);
-  digitalWrite(activate_ethanol,HIGH);
+ // pinMode(activate_ethanol,OUTPUT);
+//  digitalWrite(activate_ethanol,HIGH);
   digitalWrite(LED,HIGH);
   pinMode(DIP_switch1, INPUT_PULLUP);
   pinMode(DIP_switch2, INPUT_PULLUP);
@@ -144,6 +153,7 @@ void loop() {
 
 if (ph_status==1)
 {
+
   if (input_stringcomplete) {                         //if a string from the PC has been received in its entirety                     
     //Serial.println(inputstring);                      //send that string to the Atlas Scientific product
     int len = inputstring.length();
@@ -161,6 +171,7 @@ if (ph_status==1)
   }
 }
 
+
 if(ethanol_status==1)
 {
    Count = analogRead(ETH_BTA_PIN);
@@ -174,6 +185,7 @@ if(ethanol_status==1)
 }
 
   wsn_fermentation.battery= int(analogRead(BATT_ADC)*0.03225806); ;                 //read battery voltage, convert ADC to volts x10
+ // wsn_fermentation.pulseCount=1;
   power_spi_enable();
   
   rf12_sleep(RF12_WAKEUP);
