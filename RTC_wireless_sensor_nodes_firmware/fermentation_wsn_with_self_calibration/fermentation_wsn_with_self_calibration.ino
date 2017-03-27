@@ -64,7 +64,8 @@ const int calibration_delay= 50;   // for calibration time, show end user that t
 int i;    // for for loop
 boolean DIP1;   // used during NodeId config and calibration
 boolean DIP2; // used during NodeId config and calibration
-//byte stand_alone_only=1;   //for calibration only 
+const int calibration_sampling= 20; 
+
  
 // Note: Please update emonhub configuration guide on OEM wide packet structure change:
 // https://github.com/openenergymonitor/emonhub/blob/emon-pi/configuration.md
@@ -305,7 +306,7 @@ void calibrate()
        if(current_time - previousCalibration >= calibrate_after) 
        {
           previousCalibration = current_time;
-          lowpoint_cal(); 
+          calibrate_ph("cal,low,4\r"); 
       }
      }
      
@@ -317,7 +318,7 @@ void calibrate()
         if(current_time - previousCalibration >= calibrate_after) 
         {
             previousCalibration = current_time;
-            midpoint_cal(); 
+            calibrate_ph("cal,mid,7\r");
         }
      }
   
@@ -328,52 +329,21 @@ void calibrate()
         if(current_time - previousCalibration >= calibrate_after) 
         {
             previousCalibration = current_time;
-            highpoint_cal(); 
+            calibrate_ph("cal,high,10\r");
         }
      }
 } 
-
-void midpoint_cal()
-{                        //calibrate to a pH of 7
+void calibrate_ph(String calibration_command)
+{
   for (i=0; i<20; i++)
   {
       dodelay(calibration_delay);
       digitalWrite(LED,HIGH);
       dodelay(calibration_delay);
       digitalWrite(LED,LOW);
-      myserial.print("cal,mid,7\r"); //send the "cal,mid,7" command to calibrate to a pH of 7.00
-  }    
-   if (debug ==1)  Serial.println("Midpoint calibration is done"); 
-}
-
-void lowpoint_cal()
-{                       //calibrate to a pH of 4 
-  for (i=0; i<20; i++)
-  {
-      dodelay(calibration_delay);
-      digitalWrite(LED,HIGH);
-      dodelay(calibration_delay);
-      digitalWrite(LED,LOW);
-      myserial.print("cal,low,4\r"); //send the "cal,low,4" command to calibrate to a pH of 4.00
-  } 
-    if (debug ==1)  Serial.println("Lowpoint calibration is done");  
-}     
-
-void highpoint_cal()
-{                      //calibrate to a pH of 10.00  
-  for (i=0; i<20; i++)
-  {
-      dodelay(calibration_delay);
-      digitalWrite(LED,HIGH);
-      dodelay(calibration_delay);
-      digitalWrite(LED,LOW);
-      myserial.print("cal,high,10\r");   //send the "cal,high,10" command to calibrate to a pH of 10.00 
+      myserial.print(calibration_command);   //send the "cal,high,10" command to calibrate to a pH of 10.00 
   }
-   if (debug ==1 ) Serial.println("Highpoint calibration is done");
-}  
-
-
-
+}
 
   void dodelay(unsigned int ms)
 {
