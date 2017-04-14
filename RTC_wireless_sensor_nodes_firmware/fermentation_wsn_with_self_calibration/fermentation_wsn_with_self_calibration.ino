@@ -213,6 +213,7 @@ if (ph_status==1)
 {
   if (input_stringcomplete) {                         //if a string from the serial has been received in its entirety                     
     int len = inputstring.length();
+    // Serial.println(inputstring);
     ph = &inputstring[len - 7];   //http://forum.arduino.cc/index.php?topic=369818.0
     PH= atof(ph);
     wsn_fermentation.ph=PH*10;
@@ -264,7 +265,7 @@ if(ethanol_status==1)
    //delay loop, wait for time_between_reading minutes
   for (int i=0; i<time_between_readings; i++)
   {
-    dodelay(50000); //1 minute should be 60000 but is not because of variation of internal time source
+    dodelay(10000); //1 minute should be 60000 but is not because of variation of internal time source
     //caution parameter cannot be more than 65000, maybe find better solution
     //due to internal time source 60000 is longer than 1 minute. so 50s is used.
   }
